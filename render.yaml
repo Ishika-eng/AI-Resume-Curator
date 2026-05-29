@@ -9,3 +9,5 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.13.0"
+      - key: FRONTEND_URL
+        value: "https://ai-resume-curator.vercel.app"
