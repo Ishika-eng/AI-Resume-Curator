@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Upload, FileText, Loader2, AlertCircle } from "lucide-react";
-import axios from "axios";
+import api from "../api";
 
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -29,10 +29,7 @@ export default function ResumeUpload({ onParsed }) {
     formData.append("file", file);
 
     try {
-      const res = await axios.post(
-        "http://localhost:8000/api/resume/upload",
-        formData
-      );
+      const res = await api.post("/api/resume/upload", formData);
       onParsed(res.data);
     } catch (err) {
       setError(

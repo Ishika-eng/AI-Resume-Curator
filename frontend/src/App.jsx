@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "./api";
 import { Loader2, Sparkles } from "lucide-react";
 import ResumeUpload from "./components/ResumeUpload";
 import JobDescriptionInput from "./components/JobDescriptionInput";
@@ -105,7 +105,7 @@ function App() {
     setViewingResults(null);
 
     try {
-      const res = await axios.post("http://localhost:8000/api/curate", {
+      const res = await api.post("/api/curate", {
         resume: parsedResume,
         job_analysis: jobAnalysis,
         github_profile: githubProfile || null,

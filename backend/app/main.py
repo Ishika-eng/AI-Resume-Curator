@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,9 +7,18 @@ from app.routers import curate, github, job, local_scan, resume
 
 app = FastAPI(title="AI Resume Curator", version="0.1.0")
 
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
+extra_origin = os.environ.get("FRONTEND_URL")
+if extra_origin:
+    allowed_origins.append(extra_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

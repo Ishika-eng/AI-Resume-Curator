@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FolderSearch, Loader2, AlertCircle } from "lucide-react";
-import axios from "axios";
+import api from "../api";
 
 export default function LocalScanInput({ onScanned, onSkip }) {
   const [directory, setDirectory] = useState("");
@@ -18,7 +18,7 @@ export default function LocalScanInput({ onScanned, onSkip }) {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:8000/api/local/scan", {
+      const res = await api.post("/api/local/scan", {
         directory: directory.trim(),
       });
       onScanned(res.data);

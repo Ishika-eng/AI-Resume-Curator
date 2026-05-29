@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Briefcase, Loader2, AlertCircle } from "lucide-react";
-import axios from "axios";
+import api from "../api";
 
 export default function JobDescriptionInput({ onAnalyzed }) {
   const [text, setText] = useState("");
@@ -20,7 +20,7 @@ export default function JobDescriptionInput({ onAnalyzed }) {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:8000/api/job/analyze", {
+      const res = await api.post("/api/job/analyze", {
         text,
         title: title || null,
         company: company || null,

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { GitBranch, Loader2, AlertCircle, Key } from "lucide-react";
-import axios from "axios";
+import api from "../api";
 
 export default function GitHubInput({ onAnalyzed, onSkip }) {
   const [username, setUsername] = useState("");
@@ -20,7 +20,7 @@ export default function GitHubInput({ onAnalyzed, onSkip }) {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:8000/api/github/analyze", {
+      const res = await api.post("/api/github/analyze", {
         username: username.trim(),
         token: token.trim() || null,
       });
