@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "./api";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, RotateCcw } from "lucide-react";
+import Landing from "./components/Landing";
 import ResumeUpload from "./components/ResumeUpload";
 import JobDescriptionInput from "./components/JobDescriptionInput";
 import JobAnalysisView from "./components/JobAnalysisView";
@@ -24,24 +25,24 @@ function StepIndicator({ current }) {
           <div key={i} className="flex items-center gap-1">
             {i > 0 && (
               <div
-                className={`w-4 sm:w-8 h-px ${isDone ? "bg-violet-500" : "bg-slate-700"}`}
+                className={`w-4 sm:w-8 h-px ${isDone ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`}
               />
             )}
             <div className="flex items-center gap-1.5">
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border ${
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border transition-colors ${
                   isActive
-                    ? "border-violet-500 bg-violet-500/20 text-violet-300"
+                    ? "border-[var(--accent)] bg-[var(--accent-glow)] text-[var(--accent)]"
                     : isDone
-                      ? "border-violet-500 bg-violet-500 text-white"
-                      : "border-slate-600 bg-slate-800 text-slate-500"
+                      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                      : "border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-muted)]"
                 }`}
               >
                 {isDone ? "✓" : i + 1}
               </div>
               <span
                 className={`text-xs hidden sm:inline ${
-                  isActive ? "text-white" : "text-slate-500"
+                  isActive ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"
                 }`}
               >
                 {label}
@@ -56,19 +57,20 @@ function StepIndicator({ current }) {
 
 function CompletedBadge({ label, detail }) {
   return (
-    <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-3 flex items-center gap-3">
-      <div className="w-7 h-7 bg-green-500/20 rounded-lg flex items-center justify-center text-green-400 text-xs">
-        ✓
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-3">
+      <div className="w-7 h-7 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-400 text-xs">
+        {"✓"}
       </div>
       <div>
-        <p className="text-white text-sm font-medium">{label}</p>
-        <p className="text-slate-500 text-xs">{detail}</p>
+        <p className="text-[var(--text-primary)] text-sm font-medium">{label}</p>
+        <p className="text-[var(--text-muted)] text-xs">{detail}</p>
       </div>
     </div>
   );
 }
 
 function App() {
+  const [started, setStarted] = useState(false);
   const [step, setStep] = useState("resume");
   const [parsedResume, setParsedResume] = useState(null);
   const [jobAnalysis, setJobAnalysis] = useState(null);
@@ -76,7 +78,6 @@ function App() {
   const [localScan, setLocalScan] = useState(null);
   const [curationResult, setCurationResult] = useState(null);
   const [curating, setCurating] = useState(false);
-
   const [viewingResults, setViewingResults] = useState(null);
 
   const handleResumeParsed = (data) => {
@@ -128,7 +129,12 @@ function App() {
     setCurating(false);
     setViewingResults(null);
     setStep("resume");
+    setStarted(false);
   };
+
+  if (!started) {
+    return <Landing onStart={() => setStarted(true)} />;
+  }
 
   const completedBadges = () => {
     const badges = [];
@@ -172,27 +178,30 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <header className="border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
+      <div className="grain" />
+
+      <header className="relative z-10 border-b border-[var(--border)] bg-[var(--bg-primary)]/80 backdrop-blur-sm sticky top-0">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-9 h-9 bg-gradient-to-br from-[var(--accent)] to-indigo-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
             RC
           </div>
-          <h1 className="text-xl font-semibold text-white">
+          <h1 className="text-lg font-semibold text-[var(--text-primary)]">
             AI Resume Curator
           </h1>
           {parsedResume && (
             <button
               onClick={resetAll}
-              className="ml-auto text-sm text-slate-400 hover:text-white transition-colors"
+              className="ml-auto flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
             >
+              <RotateCcw className="w-3.5 h-3.5" />
               Start Over
             </button>
           )}
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-10">
+      <main className="relative z-10 max-w-5xl mx-auto px-6 py-10">
         <StepIndicator current={step} />
 
         {step === "resume" && (
@@ -213,7 +222,7 @@ function App() {
             />
             <button
               onClick={() => { setViewingResults(null); setStep("github"); }}
-              className="w-full max-w-md mx-auto block bg-violet-600 hover:bg-violet-500 text-white font-medium py-3 rounded-xl transition-colors"
+              className="w-full max-w-md mx-auto block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium py-3 rounded-xl transition-colors text-sm"
             >
               Continue to GitHub Analysis
             </button>
@@ -237,7 +246,7 @@ function App() {
             />
             <button
               onClick={() => { setViewingResults(null); setStep("local"); }}
-              className="w-full max-w-md mx-auto block bg-violet-600 hover:bg-violet-500 text-white font-medium py-3 rounded-xl transition-colors"
+              className="w-full max-w-md mx-auto block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium py-3 rounded-xl transition-colors text-sm"
             >
               Continue to Local Project Scan
             </button>
@@ -261,19 +270,19 @@ function App() {
             />
             <button
               onClick={handleCurate}
-              className="w-full max-w-md mx-auto block bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+              className="w-full max-w-md mx-auto block bg-gradient-to-r from-[var(--accent)] to-indigo-500 hover:from-[var(--accent-hover)] hover:to-indigo-400 text-white font-medium py-3 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
             >
-              <Sparkles className="w-5 h-5" />
+              <Sparkles className="w-4 h-4" />
               Curate My Resume
             </button>
           </div>
         )}
 
         {step === "curate" && curating && (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Loader2 className="w-12 h-12 text-violet-400 animate-spin" />
-            <p className="text-slate-300 text-lg">Curating your resume...</p>
-            <p className="text-slate-500 text-sm">
+          <div className="flex flex-col items-center justify-center py-20 gap-4 animate-fade-up">
+            <Loader2 className="w-10 h-10 text-[var(--accent)] animate-spin" />
+            <p className="text-[var(--text-primary)] text-lg font-medium">Curating your resume...</p>
+            <p className="text-[var(--text-muted)] text-sm">
               Analyzing skills, rewriting bullets, scoring ATS compatibility
             </p>
           </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GitBranch, Loader2, AlertCircle, Key } from "lucide-react";
+import { GitBranch, Loader2, AlertCircle, Key, ArrowRight } from "lucide-react";
 import api from "../api";
 
 export default function GitHubInput({ onAnalyzed, onSkip }) {
@@ -11,113 +11,76 @@ export default function GitHubInput({ onAnalyzed, onSkip }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username.trim()) {
-      setError("Please enter a GitHub username.");
-      return;
-    }
-
+    if (!username.trim()) { setError("Enter a GitHub username."); return; }
     setError(null);
     setLoading(true);
-
     try {
-      const res = await api.post("/api/github/analyze", {
-        username: username.trim(),
-        token: token.trim() || null,
-      });
+      const res = await api.post("/api/github/analyze", { username: username.trim(), token: token.trim() || null });
       onAnalyzed(res.data);
     } catch (err) {
-      setError(
-        err.response?.data?.detail || "Failed to analyze GitHub profile."
-      );
+      setError(err.response?.data?.detail || "Failed to analyze.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center gap-8">
-      <div className="text-center space-y-3">
-        <h2 className="text-3xl font-bold text-white">
-          Connect GitHub Profile
-        </h2>
-        <p className="text-slate-400 max-w-md">
-          We'll analyze your repositories to discover skills and projects
-          missing from your resume.
-        </p>
+    <div className="animate-fade-up max-w-lg mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-[var(--text-primary)]">Connect GitHub</h2>
+        <p className="text-[var(--text-secondary)] text-sm mt-2">Discover skills and projects missing from your resume.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="w-full max-w-lg space-y-4">
-        <div>
-          <label className="block text-sm text-slate-400 mb-1.5">
-            GitHub Username *
-          </label>
-          <div className="relative">
-            <GitBranch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. octocat"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-11 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="relative">
+          <GitBranch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="GitHub username"
+            className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+          />
         </div>
 
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowToken(!showToken)}
-            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-300 transition-colors mb-1.5"
-          >
-            <Key className="w-3.5 h-3.5" />
-            {showToken ? "Hide" : "Add"} personal access token (optional)
-          </button>
-          {showToken && (
+        <button
+          type="button"
+          onClick={() => setShowToken(!showToken)}
+          className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+        >
+          <Key className="w-3 h-3" />
+          {showToken ? "Hide" : "Add"} access token (optional)
+        </button>
+
+        {showToken && (
+          <div>
             <input
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder="ghp_xxxxxxxxxxxx"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
+              className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm mono text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
             />
-          )}
-          {showToken && (
-            <p className="text-xs text-slate-600 mt-1">
-              Increases API rate limit from 60 to 5,000 requests/hour. No scopes needed.
-            </p>
-          )}
-        </div>
+            <p className="text-xs text-[var(--text-muted)] mt-1.5">Increases rate limit to 5,000 req/hr. No scopes needed.</p>
+          </div>
+        )}
 
         {error && (
-          <div className="flex items-center gap-2 text-red-400 bg-red-400/10 px-4 py-3 rounded-lg">
-            <AlertCircle className="w-5 h-5 shrink-0" />
-            <p className="text-sm">{error}</p>
+          <div className="flex items-center gap-2 text-[var(--danger)] text-sm">
+            <AlertCircle className="w-4 h-4" /> {error}
           </div>
         )}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-violet-600 hover:bg-violet-500 disabled:bg-violet-600/50 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
         >
-          {loading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Analyzing repositories...
-            </>
-          ) : (
-            <>
-              <GitBranch className="w-5 h-5" />
-              Analyze GitHub Profile
-            </>
-          )}
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+          {loading ? "Analyzing repos..." : "Analyze GitHub"}
         </button>
 
-        <button
-          type="button"
-          onClick={onSkip}
-          className="w-full text-slate-500 hover:text-slate-300 text-sm py-2 transition-colors"
-        >
+        <button type="button" onClick={onSkip} className="w-full py-2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] text-sm transition-colors">
           Skip this step
         </button>
       </form>

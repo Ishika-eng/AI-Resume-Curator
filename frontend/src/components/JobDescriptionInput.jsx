@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Briefcase, Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import api from "../api";
 
 export default function JobDescriptionInput({ onAnalyzed }) {
@@ -11,105 +11,65 @@ export default function JobDescriptionInput({ onAnalyzed }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!text.trim()) {
-      setError("Please paste a job description.");
-      return;
-    }
-
+    if (!text.trim()) { setError("Paste a job description first."); return; }
     setError(null);
     setLoading(true);
-
     try {
-      const res = await api.post("/api/job/analyze", {
-        text,
-        title: title || null,
-        company: company || null,
-      });
+      const res = await api.post("/api/job/analyze", { text, title: title || null, company: company || null });
       onAnalyzed(res.data);
     } catch (err) {
-      setError(
-        err.response?.data?.detail || "Failed to analyze job description."
-      );
+      setError(err.response?.data?.detail || "Failed to analyze.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center gap-8">
-      <div className="text-center space-y-3">
-        <h2 className="text-3xl font-bold text-white">
-          Paste Job Description
-        </h2>
-        <p className="text-slate-400 max-w-md">
-          Paste the job posting to extract skills, keywords, and requirements.
-        </p>
+    <div className="animate-fade-up max-w-2xl mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-[var(--text-primary)]">Paste the job description</h2>
+        <p className="text-[var(--text-secondary)] text-sm mt-2">We'll extract skills, keywords, and requirements.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">
-              Job Title (optional)
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Software Engineer"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">
-              Company (optional)
-            </label>
-            <input
-              type="text"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder="e.g. Google"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm text-slate-400 mb-1.5">
-            Job Description *
-          </label>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Paste the full job description here..."
-            rows={12}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors resize-y"
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Job title (optional)"
+            className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+          />
+          <input
+            type="text"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder="Company (optional)"
+            className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
           />
         </div>
 
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Paste the full job description here..."
+          rows={10}
+          className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors resize-y leading-relaxed"
+        />
+
         {error && (
-          <div className="flex items-center gap-2 text-red-400 bg-red-400/10 px-4 py-3 rounded-lg">
-            <AlertCircle className="w-5 h-5 shrink-0" />
-            <p className="text-sm">{error}</p>
+          <div className="flex items-center gap-2 text-[var(--danger)] text-sm">
+            <AlertCircle className="w-4 h-4" /> {error}
           </div>
         )}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-violet-600 hover:bg-violet-500 disabled:bg-violet-600/50 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
         >
-          {loading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <Briefcase className="w-5 h-5" />
-              Analyze Job Description
-            </>
-          )}
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+          {loading ? "Analyzing..." : "Analyze job description"}
         </button>
       </form>
     </div>

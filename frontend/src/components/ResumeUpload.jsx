@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, FileText, Loader2, AlertCircle } from "lucide-react";
+import { Upload, Loader2, AlertCircle } from "lucide-react";
 import api from "../api";
 
 const ALLOWED_TYPES = [
@@ -20,107 +20,72 @@ export default function ResumeUpload({ onParsed }) {
       setError("Please upload a PDF or DOCX file.");
       return;
     }
-
     setError(null);
     setFileName(file.name);
     setUploading(true);
-
     const formData = new FormData();
     formData.append("file", file);
-
     try {
       const res = await api.post("/api/resume/upload", formData);
       onParsed(res.data);
     } catch (err) {
-      setError(
-        err.response?.data?.detail || "Failed to parse resume. Please try again."
-      );
+      setError(err.response?.data?.detail || "Failed to parse resume.");
     } finally {
       setUploading(false);
     }
   };
 
-  const onDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  };
-
-  const onDragOver = (e) => {
-    e.preventDefault();
-    setDragging(true);
-  };
-
   return (
-    <div className="flex flex-col items-center gap-8">
-      <div className="text-center space-y-3">
-        <h2 className="text-3xl font-bold text-white">Upload Your Resume</h2>
-        <p className="text-slate-400 max-w-md">
-          Upload your resume to get started. We support PDF and DOCX formats.
-        </p>
+    <div className="animate-fade-up max-w-xl mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-[var(--text-primary)]">Upload your resume</h2>
+        <p className="text-[var(--text-secondary)] text-sm mt-2">We'll parse it into structured sections automatically.</p>
       </div>
 
       <div
-        onDrop={onDrop}
-        onDragOver={onDragOver}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onClick={() => inputRef.current?.click()}
-        className={`w-full max-w-lg border-2 border-dashed rounded-2xl p-12 flex flex-col items-center gap-4 cursor-pointer transition-all ${
+        className={`relative border-2 border-dashed rounded-2xl p-14 flex flex-col items-center gap-5 cursor-pointer transition-all duration-200 ${
           dragging
-            ? "border-violet-400 bg-violet-500/10"
-            : "border-slate-600 hover:border-slate-500 bg-slate-800/50"
+            ? "border-[var(--accent)] bg-[var(--accent-glow)]"
+            : "border-[var(--border)] hover:border-[var(--border-hover)] bg-[var(--bg-card)]"
         }`}
       >
         {uploading ? (
           <>
-            <Loader2 className="w-12 h-12 text-violet-400 animate-spin" />
-            <p className="text-slate-300">Parsing {fileName}...</p>
+            <Loader2 className="w-10 h-10 text-[var(--accent)] animate-spin" />
+            <p className="text-[var(--text-secondary)] text-sm">Parsing <span className="text-[var(--text-primary)] mono">{fileName}</span></p>
           </>
         ) : (
           <>
-            <div className="w-16 h-16 bg-slate-700/50 rounded-2xl flex items-center justify-center">
-              <Upload className="w-8 h-8 text-violet-400" />
+            <div className="w-14 h-14 rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center">
+              <Upload className="w-6 h-6 text-[var(--accent)]" />
             </div>
             <div className="text-center">
-              <p className="text-white font-medium">
-                Drop your resume here or click to browse
+              <p className="text-[var(--text-primary)] font-medium">
+                Drop your resume here or <span className="text-[var(--accent)]">browse</span>
               </p>
-              <p className="text-slate-500 text-sm mt-1">PDF, DOC, DOCX</p>
+              <p className="text-[var(--text-muted)] text-xs mt-2 tracking-wide uppercase">PDF &middot; DOCX &middot; DOC</p>
             </div>
           </>
         )}
-
         <input
           ref={inputRef}
           type="file"
           accept=".pdf,.doc,.docx"
           className="hidden"
-          onChange={(e) => {
-            const file = e.target.files[0];
-            if (file) handleFile(file);
-          }}
+          onChange={(e) => { if (e.target.files[0]) handleFile(e.target.files[0]); }}
         />
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-red-400 bg-red-400/10 px-4 py-3 rounded-lg max-w-lg w-full">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <p className="text-sm">{error}</p>
+        <div className="mt-4 flex items-center gap-2 text-[var(--danger)] bg-[var(--danger)]/10 px-4 py-3 rounded-xl text-sm">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
         </div>
       )}
-
-      <div className="flex items-center gap-6 text-slate-500 text-sm">
-        <span className="flex items-center gap-1.5">
-          <FileText className="w-4 h-4" /> PDF
-        </span>
-        <span className="flex items-center gap-1.5">
-          <FileText className="w-4 h-4" /> DOCX
-        </span>
-        <span className="flex items-center gap-1.5">
-          <FileText className="w-4 h-4" /> DOC
-        </span>
-      </div>
     </div>
   );
 }
