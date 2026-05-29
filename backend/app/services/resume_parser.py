@@ -73,17 +73,27 @@ def _extract_text_from_pdf(file_path: Path) -> tuple[str, dict]:
             k: str(v) for k, v in pdf_meta.items() if v
         }
 
-    with pdfplumber.open(str(file_path)) as pdf:
-        tables = []
-        for page in pdf.pages:
+    # Try pdfplumber first (better table/layout extraction)
+    try:
+        with pdfplumber.open(str(file_path)) as pdf:
+            tables = []
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text)
+                page_tables = page.extract_tables()
+                if page_tables:
+                    tables.extend(page_tables)
+            if tables:
+                metadata["tables_found"] = len(tables)
+    except Exception:
+        # Fallback to pypdf if pdfplumber fails (e.g. missing Ghostscript on Windows)
+        text_parts = []
+        for page in reader.pages:
             page_text = page.extract_text()
             if page_text:
                 text_parts.append(page_text)
-            page_tables = page.extract_tables()
-            if page_tables:
-                tables.extend(page_tables)
-        if tables:
-            metadata["tables_found"] = len(tables)
+        metadata["parser_fallback"] = "pypdf"
 
     return "\n".join(text_parts), metadata
 

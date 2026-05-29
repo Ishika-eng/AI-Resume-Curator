@@ -1,4 +1,5 @@
 import shutil
+import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, UploadFile
@@ -8,7 +9,7 @@ from app.services.resume_parser import parse_resume
 
 router = APIRouter()
 
-UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+UPLOAD_DIR = Path(tempfile.gettempdir()) / "ai_resume_curator_uploads"
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
 
 
@@ -25,7 +26,9 @@ async def upload_resume(file: UploadFile):
         )
 
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    file_path = UPLOAD_DIR / file.filename
+    # Sanitize filename to avoid path issues on Windows
+    safe_name = Path(file.filename).name
+    file_path = UPLOAD_DIR / safe_name
 
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
@@ -34,5 +37,8 @@ async def upload_resume(file: UploadFile):
         result = parse_resume(file_path)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Failed to parse resume: {e}")
+    finally:
+        # Clean up uploaded file
+        file_path.unlink(missing_ok=True)
 
     return result
