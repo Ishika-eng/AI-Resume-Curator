@@ -10,7 +10,11 @@ import {
   Sparkles,
   FileText,
   Tag,
+  Download,
+  Loader2,
+  User,
 } from "lucide-react";
+import api from "../api";
 
 function ScoreRing({ score }) {
   const radius = 54;
@@ -89,6 +93,115 @@ function CollapsibleSection({ title, icon: Icon, count, children, defaultOpen = 
         )}
       </button>
       {open && <div className="px-5 pb-5 space-y-3">{children}</div>}
+    </div>
+  );
+}
+
+function ExportPanel({ result }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [location, setLocation] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+  const [github, setGithub] = useState("");
+  const [exporting, setExporting] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleExport = async (format) => {
+    if (!name.trim()) { setError("Enter your name."); return; }
+    setError(null);
+    setExporting(format);
+
+    const payload = {
+      curation_result: result,
+      candidate_name: name.trim(),
+      candidate_email: email.trim() || null,
+      candidate_phone: phone.trim() || null,
+      candidate_location: location.trim() || null,
+      candidate_linkedin: linkedin.trim() || null,
+      candidate_github: github.trim() || null,
+    };
+
+    try {
+      const res = await api.post(`/api/export/${format}`, payload, { responseType: "blob" });
+      const ext = format === "pdf" ? "pdf" : "docx";
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${name.trim().replace(/\s+/g, "_")}_Resume.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setError(`Failed to export ${format.toUpperCase()}.`);
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const inputClass = "w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors";
+
+  return (
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-6 space-y-5">
+      <div className="flex items-center gap-2.5">
+        <Download className="w-4 h-4 text-[var(--accent)]" />
+        <h3 className="text-lg font-semibold text-[var(--text-primary)]">Export Resume</h3>
+      </div>
+
+      <p className="text-sm text-[var(--text-secondary)]">
+        Add your contact details and download your ATS-optimized resume.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">Full Name *</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" className={inputClass} />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">Email</label>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" className={inputClass} />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">Phone</label>
+          <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 555-123-4567" className={inputClass} />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">Location</label>
+          <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="New York, NY" className={inputClass} />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">LinkedIn</label>
+          <input type="text" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="linkedin.com/in/johndoe" className={inputClass} />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">GitHub</label>
+          <input type="text" value={github} onChange={(e) => setGithub(e.target.value)} placeholder="github.com/johndoe" className={inputClass} />
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-sm text-[var(--danger)]">{error}</p>
+      )}
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => handleExport("pdf")}
+          disabled={exporting !== null}
+          className="flex-1 py-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+        >
+          {exporting === "pdf" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {exporting === "pdf" ? "Generating..." : "Download PDF"}
+        </button>
+        <button
+          onClick={() => handleExport("docx")}
+          disabled={exporting !== null}
+          className="flex-1 py-3 bg-[var(--bg-elevated)] hover:bg-[var(--border)] disabled:opacity-50 text-[var(--text-primary)] font-medium rounded-xl border border-[var(--border)] transition-all flex items-center justify-center gap-2 text-sm"
+        >
+          {exporting === "docx" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+          {exporting === "docx" ? "Generating..." : "Download DOCX"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -278,6 +391,8 @@ export default function CurationView({ result }) {
           ))}
         </div>
       </CollapsibleSection>
+
+      <ExportPanel result={result} />
     </div>
   );
 }

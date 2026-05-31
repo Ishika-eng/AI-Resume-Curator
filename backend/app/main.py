@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import curate, github, job, local_scan, resume
+from app.routers import curate, export, github, job, local_scan, resume
 
 app = FastAPI(title="AI Resume Curator", version="0.1.0")
 
@@ -36,6 +36,7 @@ app.include_router(job.router, prefix="/api")
 app.include_router(github.router, prefix="/api")
 app.include_router(local_scan.router, prefix="/api")
 app.include_router(curate.router, prefix="/api")
+app.include_router(export.router, prefix="/api")
 
 
 @app.get("/api/health")
