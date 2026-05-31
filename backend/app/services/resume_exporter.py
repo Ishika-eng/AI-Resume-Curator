@@ -1,12 +1,12 @@
 """Generate ATS-friendly PDF and DOCX resumes from curation results."""
 
 import io
-import tempfile
-from pathlib import Path
+import re
 
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -23,6 +23,95 @@ from app.models.export import ExportRequest
 
 
 # ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
+
+# Sections to skip in export (raw header data, contact info already in header)
+SKIP_SECTIONS = {"Header", "Contact", "Personal Information"}
+
+
+def _clean_section_content(lines: list[str], section_title: str = "") -> list[str]:
+    """Clean up content lines: merge broken fragments, remove noise."""
+    cleaned = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        # Skip lines that look like raw contact info in wrong section
+        if re.match(r"^[\+]?\d[\d\s\-]{7,}$", stripped):
+            continue  # phone number
+        if re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", stripped):
+            continue  # email
+
+        cleaned.append(stripped)
+
+    title_lower = section_title.lower()
+
+    # For education/skills sections, keep lines separate (don't merge)
+    if any(kw in title_lower for kw in ["education", "skills", "certif", "award"]):
+        return cleaned
+
+    # For paragraph sections (profile/summary/objective), merge all lines into one
+    if any(kw in title_lower for kw in ["profile", "summary", "objective", "about"]):
+        non_bullet = []
+        for line in cleaned:
+            if line.startswith(("-", "•", "*", "·")):
+                non_bullet.append(line)
+            else:
+                non_bullet.append(line)
+        # Merge consecutive non-bullet lines into a single paragraph
+        merged = []
+        current_para = []
+        for line in non_bullet:
+            if line.startswith(("-", "•", "*", "·")):
+                if current_para:
+                    merged.append(" ".join(current_para))
+                    current_para = []
+                merged.append(line)
+            else:
+                current_para.append(line)
+        if current_para:
+            merged.append(" ".join(current_para))
+        return merged
+
+    # For other sections, merge broken lines intelligently
+    merged = []
+    for line in cleaned:
+        if merged and not line.startswith(("-", "•", "*", "·")):
+            prev = merged[-1]
+            # If previous line doesn't end with punctuation and current line
+            # starts with lowercase or looks like a continuation
+            if prev and not prev[-1] in ".!?:,;" and len(line) < 40:
+                if line[0].islower() or (not line[0].isupper() and not line[0].isdigit()):
+                    merged[-1] = prev + " " + line
+                    continue
+        merged.append(line)
+
+    return merged
+
+
+def _get_exportable_sections(req: ExportRequest) -> list[dict]:
+    """Get sections to export, skipping Header and cleaning content."""
+    sections = []
+    cr = req.curation_result
+
+    for section in cr.curated_sections:
+        # Skip raw header/contact sections
+        if section.title in SKIP_SECTIONS:
+            continue
+
+        cleaned_content = _clean_section_content(section.content, section.title)
+        if cleaned_content:
+            sections.append({
+                "title": section.title,
+                "content": cleaned_content,
+            })
+
+    return sections
+
+
+# ---------------------------------------------------------------------------
 # DOCX export
 # ---------------------------------------------------------------------------
 
@@ -32,6 +121,23 @@ def _set_run_font(run, size=11, bold=False, color=None, name="Calibri"):
     run.bold = bold
     if color:
         run.font.color.rgb = RGBColor(*color)
+
+
+def _add_section_divider(doc):
+    """Add a thin horizontal line after section heading."""
+    border_para = doc.add_paragraph()
+    border_para.paragraph_format.space_before = Pt(0)
+    border_para.paragraph_format.space_after = Pt(4)
+    pPr = border_para._p.get_or_add_pPr()
+    pBdr = pPr.makeelement(qn("w:pBdr"), {})
+    bottom = pBdr.makeelement(qn("w:bottom"), {
+        qn("w:val"): "single",
+        qn("w:sz"): "4",
+        qn("w:space"): "1",
+        qn("w:color"): "333333",
+    })
+    pBdr.append(bottom)
+    pPr.append(pBdr)
 
 
 def export_docx(req: ExportRequest) -> bytes:
@@ -75,40 +181,28 @@ def export_docx(req: ExportRequest) -> bytes:
         contact_run = contact_para.add_run("  |  ".join(contact_parts))
         _set_run_font(contact_run, size=9, color=(100, 100, 100))
 
-    # --- Sections ---
-    cr = req.curation_result
-    for section in cr.curated_sections:
+    # --- Resume sections ---
+    sections = _get_exportable_sections(req)
+
+    for sect in sections:
         # Section heading
         doc.add_paragraph()  # spacer
         heading_para = doc.add_paragraph()
-        heading_run = heading_para.add_run(section.title.upper())
+        heading_run = heading_para.add_run(sect["title"].upper())
         _set_run_font(heading_run, size=12, bold=True, color=(33, 33, 33))
 
         # Divider line
-        border_para = doc.add_paragraph()
-        border_para.paragraph_format.space_before = Pt(0)
-        border_para.paragraph_format.space_after = Pt(4)
-        pPr = border_para._p.get_or_add_pPr()
-        from docx.oxml.ns import qn
-        pBdr = pPr.makeelement(qn("w:pBdr"), {})
-        bottom = pBdr.makeelement(qn("w:bottom"), {
-            qn("w:val"): "single",
-            qn("w:sz"): "4",
-            qn("w:space"): "1",
-            qn("w:color"): "333333",
-        })
-        pBdr.append(bottom)
-        pPr.append(pBdr)
+        _add_section_divider(doc)
 
         # Section content
-        for line in section.content:
+        for line in sect["content"]:
             content_para = doc.add_paragraph()
             stripped = line.strip()
 
             # Bullet point style
-            if stripped.startswith(("- ", "• ", "* ")):
+            if stripped.startswith(("- ", "• ", "* ", "· ")):
                 content_para.style = "List Bullet"
-                text = stripped.lstrip("-•* ").strip()
+                text = stripped.lstrip("-•*· ").strip()
             else:
                 text = stripped
 
@@ -116,13 +210,14 @@ def export_docx(req: ExportRequest) -> bytes:
             _set_run_font(content_run, size=11)
 
     # --- Missing skills section (if any) ---
-    if cr.missing_skills:
+    if req.curation_result.missing_skills:
         doc.add_paragraph()
         heading_para = doc.add_paragraph()
         heading_run = heading_para.add_run("ADDITIONAL SKILLS (RECOMMENDED TO ADD)")
         _set_run_font(heading_run, size=12, bold=True, color=(33, 33, 33))
+        _add_section_divider(doc)
 
-        skills_text = ", ".join(ms.name for ms in cr.missing_skills)
+        skills_text = ", ".join(ms.name for ms in req.curation_result.missing_skills)
         skills_para = doc.add_paragraph()
         skills_run = skills_para.add_run(skills_text)
         _set_run_font(skills_run, size=11)
@@ -227,34 +322,34 @@ def export_pdf(req: ExportRequest) -> bytes:
     if contact_parts:
         elements.append(Paragraph("  |  ".join(contact_parts), contact_style))
 
-    # --- Sections ---
-    cr = req.curation_result
+    # --- Resume sections ---
+    sections = _get_exportable_sections(req)
 
-    for section in cr.curated_sections:
-        elements.append(Paragraph(section.title.upper(), heading_style))
+    for sect in sections:
+        elements.append(Paragraph(sect["title"].upper(), heading_style))
         elements.append(HRFlowable(
             width="100%", thickness=0.8,
             color=HexColor("#333333"),
             spaceAfter=6, spaceBefore=0,
         ))
 
-        for line in section.content:
+        for line in sect["content"]:
             stripped = line.strip()
-            if stripped.startswith(("- ", "• ", "* ")):
-                text = stripped.lstrip("-•* ").strip()
+            if stripped.startswith(("- ", "• ", "* ", "· ")):
+                text = stripped.lstrip("-•*· ").strip()
                 elements.append(Paragraph(f"&bull;  {text}", bullet_style))
             else:
                 elements.append(Paragraph(stripped, body_style))
 
     # --- Missing skills ---
-    if cr.missing_skills:
+    if req.curation_result.missing_skills:
         elements.append(Paragraph("ADDITIONAL SKILLS (RECOMMENDED TO ADD)", heading_style))
         elements.append(HRFlowable(
             width="100%", thickness=0.8,
             color=HexColor("#333333"),
             spaceAfter=6, spaceBefore=0,
         ))
-        skills_text = ", ".join(ms.name for ms in cr.missing_skills)
+        skills_text = ", ".join(ms.name for ms in req.curation_result.missing_skills)
         elements.append(Paragraph(skills_text, body_style))
 
     doc.build(elements)

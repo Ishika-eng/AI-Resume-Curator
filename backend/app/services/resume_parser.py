@@ -34,6 +34,21 @@ def _extract_section_title(line: str) -> str:
     return line.strip().rstrip(":").title()
 
 
+def _clean_content_lines(lines: list[str]) -> list[str]:
+    """Remove very short fragments and merge broken lines from column extraction."""
+    cleaned = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # Skip very short orphan fragments (likely column artifacts)
+        # unless they look like skills or meaningful short items
+        if len(stripped) < 3 and not stripped.isalpha():
+            continue
+        cleaned.append(stripped)
+    return cleaned
+
+
 def _segment_into_sections(text: str) -> list[ParsedSection]:
     lines = text.split("\n")
     sections: list[ParsedSection] = []
@@ -45,10 +60,31 @@ def _segment_into_sections(text: str) -> list[ParsedSection]:
         if not stripped:
             continue
 
+        # Handle cases where two section headers appear on the same line
+        # e.g., "PROJECTS SKILLS" from two-column layouts
         if _is_section_header(stripped):
+            # Check if this line contains multiple headers
+            words = stripped.split()
+            multi_headers = []
+            for w in words:
+                if _is_section_header(w):
+                    multi_headers.append(w)
+
+            if len(multi_headers) >= 2:
+                # Save current section
+                if current_lines:
+                    sections.append(
+                        ParsedSection(title=current_title, content=_clean_content_lines(current_lines))
+                    )
+                # Start with the first header, second will come as separate section
+                current_title = _extract_section_title(multi_headers[0])
+                current_lines = []
+                # We'll pick up the second header on its own in subsequent content
+                continue
+
             if current_lines:
                 sections.append(
-                    ParsedSection(title=current_title, content=current_lines)
+                    ParsedSection(title=current_title, content=_clean_content_lines(current_lines))
                 )
             current_title = _extract_section_title(stripped)
             current_lines = []
@@ -56,7 +92,7 @@ def _segment_into_sections(text: str) -> list[ParsedSection]:
             current_lines.append(stripped)
 
     if current_lines:
-        sections.append(ParsedSection(title=current_title, content=current_lines))
+        sections.append(ParsedSection(title=current_title, content=_clean_content_lines(current_lines)))
 
     return sections
 
