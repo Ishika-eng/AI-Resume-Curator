@@ -1,11 +1,15 @@
 import { useState, useRef } from "react";
-import { Upload, Loader2, AlertCircle } from "lucide-react";
+import { Upload, Loader2, AlertCircle, Sparkles } from "lucide-react";
 import api from "../api";
 
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/msword",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
 ];
 
 export default function ResumeUpload({ onParsed }) {
@@ -16,8 +20,10 @@ export default function ResumeUpload({ onParsed }) {
   const inputRef = useRef(null);
 
   const handleFile = async (file) => {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Please upload a PDF or DOCX file.");
+    const ext = file.name.split(".").pop().toLowerCase();
+    const allowedExts = ["pdf", "doc", "docx", "png", "jpg", "jpeg", "webp"];
+    if (!allowedExts.includes(ext)) {
+      setError("Unsupported file. Upload PDF, DOCX, or image (PNG/JPG).");
       return;
     }
     setError(null);
@@ -26,10 +32,10 @@ export default function ResumeUpload({ onParsed }) {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await api.post("/api/resume/upload", formData);
+      const res = await api.post("/api/resume/upload", formData, { timeout: 60000 });
       onParsed(res.data);
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to parse resume.");
+      setError(err.response?.data?.detail || "Failed to parse resume. Try again.");
     } finally {
       setUploading(false);
     }
@@ -39,7 +45,9 @@ export default function ResumeUpload({ onParsed }) {
     <div className="animate-fade-up max-w-xl mx-auto">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-[var(--text-primary)]">Upload your resume</h2>
-        <p className="text-[var(--text-secondary)] text-sm mt-2">We'll parse it into structured sections automatically.</p>
+        <p className="text-[var(--text-secondary)] text-sm mt-2">
+          AI-powered parsing — works with any format, even messy Canva resumes.
+        </p>
       </div>
 
       <div
@@ -55,8 +63,11 @@ export default function ResumeUpload({ onParsed }) {
       >
         {uploading ? (
           <>
-            <Loader2 className="w-10 h-10 text-[var(--accent)] animate-spin" />
-            <p className="text-[var(--text-secondary)] text-sm">Parsing <span className="text-[var(--text-primary)] mono">{fileName}</span></p>
+            <Sparkles className="w-10 h-10 text-[var(--accent)] animate-pulse" />
+            <div className="text-center">
+              <p className="text-[var(--text-primary)] font-medium">AI is reading your resume...</p>
+              <p className="text-[var(--text-muted)] text-xs mt-1 mono">{fileName}</p>
+            </div>
           </>
         ) : (
           <>
@@ -67,14 +78,16 @@ export default function ResumeUpload({ onParsed }) {
               <p className="text-[var(--text-primary)] font-medium">
                 Drop your resume here or <span className="text-[var(--accent)]">browse</span>
               </p>
-              <p className="text-[var(--text-muted)] text-xs mt-2 tracking-wide uppercase">PDF &middot; DOCX &middot; DOC</p>
+              <p className="text-[var(--text-muted)] text-xs mt-2 tracking-wide uppercase">
+                PDF &middot; DOCX &middot; PNG &middot; JPG
+              </p>
             </div>
           </>
         )}
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.doc,.docx"
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
           className="hidden"
           onChange={(e) => { if (e.target.files[0]) handleFile(e.target.files[0]); }}
         />

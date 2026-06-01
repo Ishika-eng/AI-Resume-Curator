@@ -97,13 +97,14 @@ function CollapsibleSection({ title, icon: Icon, count, children, defaultOpen = 
   );
 }
 
-function ExportPanel({ result }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [location, setLocation] = useState("");
-  const [linkedin, setLinkedin] = useState("");
-  const [github, setGithub] = useState("");
+function ExportPanel({ result, resumeMetadata }) {
+  const meta = resumeMetadata || {};
+  const [name, setName] = useState(meta.candidate_name || "");
+  const [email, setEmail] = useState(meta.candidate_email || "");
+  const [phone, setPhone] = useState(meta.candidate_phone || "");
+  const [location, setLocation] = useState(meta.candidate_location || "");
+  const [linkedin, setLinkedin] = useState(meta.candidate_linkedin || "");
+  const [github, setGithub] = useState(meta.candidate_github || "");
   const [exporting, setExporting] = useState(null);
   const [error, setError] = useState(null);
 
@@ -206,7 +207,7 @@ function ExportPanel({ result }) {
   );
 }
 
-export default function CurationView({ result }) {
+export default function CurationView({ result, resumeMetadata }) {
   const { scoring } = result;
 
   return (
@@ -392,7 +393,7 @@ export default function CurationView({ result }) {
         </div>
       </CollapsibleSection>
 
-      <ExportPanel result={result} />
+      <ExportPanel result={result} resumeMetadata={resumeMetadata} />
     </div>
   );
 }

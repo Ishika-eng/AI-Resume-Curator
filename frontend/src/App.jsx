@@ -289,7 +289,7 @@ function App() {
         )}
 
         {step === "curate" && !curating && curationResult && (
-          <CurationView result={curationResult} />
+          <CurationView result={curationResult} resumeMetadata={parsedResume?.metadata} />
         )}
       </main>
     </div>
